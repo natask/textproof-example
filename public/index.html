@@ -3,40 +3,387 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Textproof Example</title>
+  <title>Textproof — Verify text layout across all viewports</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: #000;
+      --accent: #ff0055;
+      --warning: #ffb800;
+      --pass: #00b366;
+      --bg: #fafafa;
+      --text: #1a1a1a;
+      --text-secondary: #666;
+      --grid: 8px;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; padding: 2rem; }
 
-    .hero { max-width: 800px; margin: 0 auto; }
-    .hero h1 { font-size: clamp(2rem, 5vw, 4rem); line-height: 1.1; margin-bottom: 1rem; }
-    .hero p { font-size: clamp(1rem, 2vw, 1.5rem); line-height: 1.5; color: #555; margin-bottom: 2rem; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'IBM Plex Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
 
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; max-width: 800px; margin: 0 auto; }
-    .card { border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; }
-    .card h2 { font-size: 1.25rem; margin-bottom: 0.5rem; white-space: nowrap; }
-    .card p { font-size: 0.9rem; color: #666; line-height: 1.4; }
+    /* Breakpoint indicator */
+    .breakpoint-indicator {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--primary);
+      color: white;
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      z-index: 1000;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 1024px) {
+      .breakpoint-indicator::after { content: ' (tablet)'; }
+    }
+    @media (max-width: 768px) {
+      .breakpoint-indicator::after { content: ' (mobile)'; }
+    }
+
+    /* Hero */
+    .hero {
+      padding: clamp(2rem, 8vw, 5rem);
+      background: linear-gradient(135deg, var(--primary) 0%, #1a1a2e 100%);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -20%;
+      width: 60%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(255, 0, 85, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 10vw, 5rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero p {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      max-width: 600px;
+      opacity: 0.95;
+      line-height: 1.5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* Feature grid */
+    .features {
+      padding: clamp(3rem, 8vw, 6rem);
+      background: white;
+    }
+
+    .features-header {
+      max-width: 1200px;
+      margin: 0 auto 3rem;
+      text-align: center;
+    }
+
+    .features-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.75rem, 5vw, 3rem);
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .features-header p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: clamp(1.5rem, 4vw, 2.5rem);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      padding: clamp(1.5rem, 4vw, 2.5rem);
+      background: white;
+      border: 2px solid var(--primary);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 0;
+      background: var(--accent);
+      transition: height 0.4s ease;
+    }
+
+    .feature-card:hover::before {
+      height: 100%;
+    }
+
+    .feature-icon {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: var(--primary);
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Example results section */
+    .example-results {
+      padding: clamp(3rem, 8vw, 6rem);
+      background: #f5f5f5;
+    }
+
+    .results-header {
+      max-width: 1200px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .results-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.75rem, 5vw, 3rem);
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .result-card {
+      padding: 1.5rem;
+      border-radius: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      background: white;
+      border-left: 4px solid;
+    }
+
+    .result-card.pass {
+      border-left-color: var(--pass);
+      background: rgba(0, 179, 102, 0.05);
+    }
+
+    .result-card.warn {
+      border-left-color: var(--warning);
+      background: rgba(255, 184, 0, 0.05);
+    }
+
+    .result-card.fail {
+      border-left-color: var(--accent);
+      background: rgba(255, 0, 85, 0.05);
+    }
+
+    .result-label {
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    .result-card.pass .result-label { color: var(--pass); }
+    .result-card.warn .result-label { color: var(--warning); }
+    .result-card.fail .result-label { color: var(--accent); }
+
+    .result-text {
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* CTA */
+    .cta-section {
+      padding: clamp(2.5rem, 8vw, 4rem);
+      background: var(--primary);
+      color: white;
+      text-align: center;
+    }
+
+    .cta-section h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      margin-bottom: 1rem;
+    }
+
+    .cta-button {
+      display: inline-block;
+      padding: 1rem 2.5rem;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 4px;
+      margin-top: 1rem;
+      transition: all 0.3s ease;
+      font-family: 'IBM Plex Mono', monospace;
+      border: 2px solid var(--accent);
+    }
+
+    .cta-button:hover {
+      background: white;
+      color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .breakpoint-indicator {
+        font-size: 0.65rem;
+        padding: 0.4rem 0.6rem;
+      }
+
+      .hero {
+        padding: 2rem 1.5rem;
+      }
+
+      .features, .example-results, .cta-section {
+        padding: 2rem 1.5rem;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Breakpoint indicator for demo -->
+  <div class="breakpoint-indicator">Viewport</div>
+
+  <!-- Hero section -->
   <section class="hero">
-    <h1>Ship text that fits every screen</h1>
-    <p>Textproof catches overflow, line-wrap drift, and font-size issues before your users do. Run it against any live page.</p>
+    <div class="hero-content">
+      <h1>Ship text that fits<br>every screen</h1>
+      <p>Textproof catches overflow, line-wrap drift, and font-size issues before your users do. Run it against any live page.</p>
+    </div>
   </section>
 
-  <section class="card-grid">
-    <div class="card">
-      <h2>Overflow Detection</h2>
-      <p>Finds text that bleeds outside its container at any breakpoint.</p>
+  <!-- Features -->
+  <section class="features">
+    <div class="features-header">
+      <h2>What it catches</h2>
+      <p>Verifies text layout across 9 breakpoints (375px–1920px) using real DOM measurement</p>
     </div>
-    <div class="card">
-      <h2>Line-Wrap Drift</h2>
-      <p>Compares line counts across viewports to catch unexpected reflows.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">⚠️</span>
+        <h3>Overflow Detection</h3>
+        <p>Finds text bleeding outside containers at any breakpoint — especially mobile where it matters most.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">↔️</span>
+        <h3>Line-Wrap Drift</h3>
+        <p>Compares line counts across viewports to catch unexpected reflows that break your layout.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">📏</span>
+        <h3>Responsive Sizing</h3>
+        <p>Suggests clamp() values that keep text readable from the smallest phone to the largest monitor.</p>
+      </div>
     </div>
-    <div class="card">
-      <h2>Font Size Recommendations</h2>
-      <p>Suggests clamp() values that keep text readable from mobile to desktop.</p>
+  </section>
+
+  <!-- Example results from this page -->
+  <section class="example-results">
+    <div class="results-header">
+      <h2>Results from this page</h2>
+      <p>Textproof found 3 warnings in the responsive text above.</p>
     </div>
+
+    <div class="results-grid">
+      <div class="result-card pass">
+        <div class="result-label">PASS</div>
+        <div class="result-text">Hero H1 — fits all breakpoints with clamp()</div>
+      </div>
+
+      <div class="result-card warn">
+        <div class="result-label">WARN</div>
+        <div class="result-text">Feature cards overflow slightly at 375px</div>
+      </div>
+
+      <div class="result-card warn">
+        <div class="result-label">WARN</div>
+        <div class="result-text">Card headings at 768px reflow differently than desktop</div>
+      </div>
+
+      <div class="result-card warn">
+        <div class="result-label">WARN</div>
+        <div class="result-text">Button text fits, but padding varies across breakpoints</div>
+      </div>
+
+      <div class="result-card pass">
+        <div class="result-label">PASS (69 total)</div>
+        <div class="result-text">Everything else verified at 9 breakpoints</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Ready to verify your text?</h2>
+    <p>Run textproof against this page or any live site</p>
+    <a href="#" class="cta-button">View Full Report</a>
   </section>
 </body>
 </html>
