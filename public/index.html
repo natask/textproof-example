@@ -344,37 +344,63 @@
     </div>
   </section>
 
+  <!-- Intentional failures for textproof demo -->
+  <section class="features" style="background: #f8f8f8;">
+    <div class="features-header">
+      <h2>Text bugs textproof catches</h2>
+      <p>These elements have real layout issues — textproof flags them automatically</p>
+    </div>
+
+    <div class="features-grid">
+      <!-- FAIL: nowrap overflow on mobile -->
+      <div class="feature-card" style="overflow: hidden;">
+        <span class="feature-icon" style="color: var(--accent);">✕</span>
+        <h3 style="white-space: nowrap; font-size: 1.75rem;">Unbreakable Long Heading That Overflows On Mobile Devices</h3>
+        <p>This heading uses <code>white-space: nowrap</code> with a long string — guaranteed overflow on small screens.</p>
+      </div>
+
+      <!-- FAIL: fixed large font that clips -->
+      <div class="feature-card" style="overflow: hidden;">
+        <span class="feature-icon" style="color: var(--accent);">✕</span>
+        <h3 style="font-size: 42px; line-height: 1.1;">Fixed 42px Font Size Without Responsive Scaling</h3>
+        <p>No <code>clamp()</code>, no media queries — this text clips at every mobile breakpoint.</p>
+      </div>
+
+      <!-- WARN: text that wraps too many lines on mobile -->
+      <div class="feature-card">
+        <span class="feature-icon" style="color: var(--warning);">⚠</span>
+        <h3>Excessive Line-Wrap Drift Example</h3>
+        <p style="font-size: 1.25rem;">This paragraph intentionally uses a larger font size that causes significant line-wrap drift between desktop and mobile viewports, demonstrating how textproof detects reflow problems that aren't visible at a single breakpoint.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Example results from this page -->
   <section class="example-results">
     <div class="results-header">
       <h2>Results from this page</h2>
-      <p>Textproof found 3 warnings in the responsive text above.</p>
+      <p>Textproof catches overflow, line-wrap drift, and clipping across all breakpoints.</p>
     </div>
 
     <div class="results-grid">
+      <div class="result-card fail">
+        <div class="result-label">FAIL</div>
+        <div class="result-text">nowrap heading overflows at 375px, 412px, 430px</div>
+      </div>
+
+      <div class="result-card fail">
+        <div class="result-label">FAIL</div>
+        <div class="result-text">42px heading clips inside container on mobile</div>
+      </div>
+
+      <div class="result-card warn">
+        <div class="result-label">WARN</div>
+        <div class="result-text">Large paragraph drifts +3 lines on iPhone SE</div>
+      </div>
+
       <div class="result-card pass">
         <div class="result-label">PASS</div>
         <div class="result-text">Hero H1 — fits all breakpoints with clamp()</div>
-      </div>
-
-      <div class="result-card warn">
-        <div class="result-label">WARN</div>
-        <div class="result-text">Feature cards overflow slightly at 375px</div>
-      </div>
-
-      <div class="result-card warn">
-        <div class="result-label">WARN</div>
-        <div class="result-text">Card headings at 768px reflow differently than desktop</div>
-      </div>
-
-      <div class="result-card warn">
-        <div class="result-label">WARN</div>
-        <div class="result-text">Button text fits, but padding varies across breakpoints</div>
-      </div>
-
-      <div class="result-card pass">
-        <div class="result-label">PASS (69 total)</div>
-        <div class="result-text">Everything else verified at 9 breakpoints</div>
       </div>
     </div>
   </section>
