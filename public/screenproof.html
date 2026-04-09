@@ -400,11 +400,51 @@ body {
 .canvas-nav button:disabled { opacity: 0.2; cursor: not-allowed; }
 .canvas-nav button:disabled:hover { border-color: var(--border); color: var(--text-muted); background: transparent; }
 
+/* --- VIEWPORT NAV ARROWS (left/right on canvas edges) --- */
+.viewport-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-hover);
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+.viewport-nav-arrow:hover {
+  opacity: 1;
+  background: var(--surface-raised);
+  border-color: var(--border-active);
+  color: var(--text);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.viewport-nav-arrow:active { transform: translateY(-50%) scale(0.92); }
+.viewport-nav-arrow.left { left: 1rem; }
+.viewport-nav-arrow.right { right: 1rem; }
+.viewport-nav-arrow:disabled { opacity: 0.15; cursor: not-allowed; pointer-events: none; }
+.viewport-nav-arrow .arrow-key-hint {
+  position: absolute;
+  bottom: -18px;
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  letter-spacing: 0.05em;
+}
+
 /* --- VIEWPORT --- */
 .canvas-viewport {
   flex: 1; overflow: auto;
   display: flex; align-items: flex-start; justify-content: center;
   padding: 1rem;
+  position: relative;
   background:
     radial-gradient(circle 1px at center, rgba(255,255,255,0.04) 0%, transparent 100%);
   background-size: 24px 24px;
@@ -603,6 +643,8 @@ body {
         </div>
       </div>
     <div class="canvas-viewport" id="viewport">
+      <button class="viewport-nav-arrow left" id="vpNavLeft" disabled>‹<span class="arrow-key-hint">←</span></button>
+      <button class="viewport-nav-arrow right" id="vpNavRight" disabled>›<span class="arrow-key-hint">→</span></button>
       <div class="viewport-empty">Loading preview...</div>
     </div>
     <div class="device-bar" id="deviceBar"></div>
@@ -610,7 +652,7 @@ body {
 </div>
 
 <script type="module">
-const TARGET = "https://1dcbf5bc.textproof-example.pages.dev";
+const TARGET = location.origin;
 
 let data = null;
 let activeFilter = "all";
@@ -1507,6 +1549,8 @@ function renderManualDeviceBar(devices) {
       render();
     });
   });
+
+  if (typeof updateVpNavArrows === "function") updateVpNavArrows();
 }
 
 function openManualPath(inputPath) {
@@ -1691,6 +1735,8 @@ function renderDetail() {
       renderDetail();
     });
   });
+
+  if (typeof updateVpNavArrows === "function") updateVpNavArrows();
 }
 
 // --- Keyboard nav ---
@@ -1716,22 +1762,42 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-prevBtn.addEventListener("click", () => {
+// --- Viewport nav arrows ---
+const vpNavLeft = document.getElementById("vpNavLeft");
+const vpNavRight = document.getElementById("vpNavRight");
+
+function updateVpNavArrows() {
+  const maxIdx = selectedIdx !== null
+    ? (filtered()[selectedIdx]?.devices?.length || 1) - 1
+    : (manualDevices().length || 1) - 1;
+  vpNavLeft.disabled = deviceIdx <= 0;
+  vpNavRight.disabled = deviceIdx >= maxIdx;
+}
+
+function goDevicePrev() {
   if (selectedIdx !== null) {
     if (deviceIdx > 0) { deviceIdx--; renderDetail(); }
-    return;
+  } else {
+    if (deviceIdx > 0) { deviceIdx--; render(); }
   }
-  if (deviceIdx > 0) { deviceIdx--; render(); }
-});
-nextBtn.addEventListener("click", () => {
+  updateVpNavArrows();
+}
+
+function goDeviceNext() {
   if (selectedIdx !== null) {
     const list = filtered();
     if (deviceIdx < list[selectedIdx].devices.length - 1) { deviceIdx++; renderDetail(); }
-    return;
+  } else {
+    const devices = manualDevices();
+    if (deviceIdx < devices.length - 1) { deviceIdx++; render(); }
   }
-  const devices = manualDevices();
-  if (deviceIdx < devices.length - 1) { deviceIdx++; render(); }
-});
+  updateVpNavArrows();
+}
+
+prevBtn.addEventListener("click", goDevicePrev);
+nextBtn.addEventListener("click", goDeviceNext);
+vpNavLeft.addEventListener("click", goDevicePrev);
+vpNavRight.addEventListener("click", goDeviceNext);
 
 openPathBtnEl.addEventListener("click", () => {
   selectedIdx = null;
