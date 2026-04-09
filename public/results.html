@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Textproof Results</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a0a0c;
+  --surface: #111114;
+  --border: #1c1c22;
+  --text: #e4e4e7;
+  --muted: #71717a;
+  --pass: #4ade80;
+  --warn: #facc15;
+  --fail: #f87171;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 2rem; max-width: 1400px; margin: 0 auto; line-height: 1.5; }
+
+.header { margin-bottom: 3rem; }
+.back-link { display: inline-block; margin-bottom: 1rem; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); text-decoration: none; font-size: 0.8125rem; }
+.back-link:hover { background: var(--border); }
+
+h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+.subtitle { color: var(--muted); font-size: 0.875rem; }
+
+/* Summary cards */
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; }
+.card-num { font-size: 2.5rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 0.5rem; }
+.card-label { font-size: 0.875rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.card.pass .card-num { color: var(--pass); }
+.card.warn .card-num { color: var(--warn); }
+.card.fail .card-num { color: var(--fail); }
+
+/* Breakpoint grid */
+h2 { font-size: 1.25rem; margin: 2.5rem 0 1.5rem; color: #c9a84c; }
+.breakpoints { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+.breakpoint { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; }
+.breakpoint-name { font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; }
+.breakpoint-width { color: var(--muted); font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; margin-bottom: 1rem; }
+
+.checks { display: flex; flex-direction: column; gap: 0.5rem; }
+.check { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.8125rem; }
+.check-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.check.pass .check-dot { background: var(--pass); }
+.check.warn .check-dot { background: var(--warn); }
+.check.fail .check-dot { background: var(--fail); }
+
+.progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 1rem; display: flex; }
+.progress-fill { height: 100%; transition: width 0.3s ease; }
+.progress-fill.pass { background: var(--pass); }
+.progress-fill.warn { background: var(--warn); }
+.progress-fill.fail { background: var(--fail); }
+
+.footer { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-size: 0.8125rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="back-link">← Back to example</a>
+  <h1>Textproof Results</h1>
+  <p class="subtitle" id="subtitle">Loading results...</p>
+</div>
+
+<!-- Summary -->
+<div class="summary" id="summary"></div>
+
+<!-- Results by breakpoint -->
+<h2>Results by Breakpoint</h2>
+<div class="breakpoints" id="breakpoints"></div>
+
+<div class="footer" id="footer">Generated with textproof</div>
+
+<script>
+async function loadResults() {
+  try {
+    const resp = await fetch('./results.json');
+    const data = await resp.json();
+
+    // Extract summary
+    let passCount = 0, warnCount = 0, failCount = 0, absentCount = 0;
+    const checks = {};
+
+    // Flatten all results
+    Object.entries(data.checks || {}).forEach(([checkId, check]) => {
+      Object.entries(check.devices || {}).forEach(([deviceId, device]) => {
+        const status = device.status;
+        if (status === 'pass') passCount++;
+        else if (status === 'warn') warnCount++;
+        else if (status === 'fail') failCount++;
+        else if (status === 'absent') absentCount++;
+
+        if (!checks[checkId]) checks[checkId] = {};
+        checks[checkId][deviceId] = status;
+      });
+    });
+
+    // Render summary
+    const summary = document.getElementById('summary');
+    summary.innerHTML = `
+      <div class="card pass">
+        <div class="card-num">${passCount}</div>
+        <div class="card-label">Pass</div>
+      </div>
+      <div class="card warn">
+        <div class="card-num">${warnCount}</div>
+        <div class="card-label">Warn</div>
+      </div>
+      <div class="card fail">
+        <div class="card-num">${failCount}</div>
+        <div class="card-label">Fail</div>
+      </div>
+      <div class="card">
+        <div class="card-num">${passCount + warnCount + failCount}</div>
+        <div class="card-label">Total</div>
+      </div>
+    `;
+
+    // Render by breakpoint
+    const breakpoints = document.getElementById('breakpoints');
+    (data.breakpoints || []).forEach(bp => {
+      let bpPass = 0, bpWarn = 0, bpFail = 0;
+      const bpChecks = [];
+
+      Object.entries(checks).forEach(([checkId, deviceStatuses]) => {
+        const status = deviceStatuses[bp.width] || 'absent';
+        if (status === 'pass') bpPass++;
+        else if (status === 'warn') bpWarn++;
+        else if (status === 'fail') bpFail++;
+
+        bpChecks.push({ checkId, status });
+      });
+
+      const total = bpPass + bpWarn + bpFail;
+      const passPercent = total > 0 ? (bpPass / total * 100) : 100;
+
+      let checksHTML = bpChecks.slice(0, 3).map(c =>
+        `<div class="check ${c.status}"><div class="check-dot"></div>${c.checkId.slice(0, 20)}</div>`
+      ).join('');
+
+      if (bpChecks.length > 3) {
+        checksHTML += `<div class="check" style="color: var(--muted);">+${bpChecks.length - 3} more</div>`;
+      }
+
+      breakpoints.innerHTML += `
+        <div class="breakpoint">
+          <div class="breakpoint-name">${bp.name}</div>
+          <div class="breakpoint-width">${bp.width}px</div>
+          <div class="checks">${checksHTML}</div>
+          <div class="progress-bar">
+            <div class="progress-fill pass" style="width: ${passPercent}%"></div>
+            <div class="progress-fill warn" style="width: ${bpWarn / total * 100 || 0}%"></div>
+            <div class="progress-fill fail" style="width: ${bpFail / total * 100 || 0}%"></div>
+          </div>
+          <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.75rem; color: var(--muted);">
+            <span>✓ ${bpPass}</span>
+            <span>⚠ ${bpWarn}</span>
+            <span>✕ ${bpFail}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    // Update subtitle
+    document.getElementById('subtitle').textContent =
+      `${passCount} pass • ${warnCount} warn • ${failCount} fail across 9 breakpoints`;
+
+  } catch (e) {
+    document.getElementById('summary').innerHTML = `<div style="grid-column: 1/-1; color: var(--fail);">Error loading results: ${e.message}</div>`;
+  }
+}
+
+loadResults();
+</script>
+
+</body>
+</html>
