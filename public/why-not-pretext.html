@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Textproof — Why Real DOM, Not Pretext Math</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a0a0c;
+  --surface: #111114;
+  --border: #1c1c22;
+  --text: #e4e4e7;
+  --muted: #71717a;
+  --gold: #c9a84c;
+  --green: #4ade80;
+  --yellow: #facc15;
+  --red: #f87171;
+  --blue: #60a5fa;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 2rem; max-width: 1100px; margin: 0 auto; line-height: 1.5; }
+
+h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+.subtitle { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+h2 { font-size: 1.125rem; font-weight: 600; color: var(--gold); margin: 2.5rem 0 1rem; letter-spacing: 0.02em; }
+h3 { font-size: 0.875rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 1.5rem 0 0.75rem; }
+
+/* Summary cards */
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 2rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; text-align: center; }
+.card .n { font-size: 2.25rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.card .l { font-size: 0.6875rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+.card.green .n { color: var(--green); }
+.card.yellow .n { color: var(--yellow); }
+.card.red .n { color: var(--red); }
+.card.blue .n { color: var(--blue); }
+
+/* Donut chart */
+.donut-row { display: flex; gap: 2rem; align-items: center; margin: 1.5rem 0; }
+.donut-container { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
+.donut-container svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.donut-center .pct { font-size: 2rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.donut-center .lbl { font-size: 0.6875rem; color: var(--muted); text-transform: uppercase; }
+.donut-legend { display: flex; flex-direction: column; gap: 0.5rem; }
+.legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* Breakdown bars */
+.bar-section { margin: 1.5rem 0; }
+.bar-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.bar-label { width: 180px; font-size: 0.75rem; color: var(--muted); text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 28px; background: var(--surface); border-radius: 6px; overflow: hidden; display: flex; position: relative; border: 1px solid var(--border); }
+.bar-fill { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.625rem; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--bg); min-width: 24px; transition: width 0.6s ease; }
+.bar-fill.green { background: var(--green); }
+.bar-fill.yellow { background: var(--yellow); }
+.bar-fill.red { background: var(--red); }
+.bar-pct { font-size: 0.6875rem; color: var(--muted); width: 40px; text-align: right; font-family: 'JetBrains Mono', monospace; }
+
+/* Fault table */
+.fault-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+.fault-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; }
+.fault-card h4 { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; }
+.fault-card .big { font-size: 3rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.fault-card .desc { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.6; }
+
+/* Failure evidence */
+.evidence { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 0.75rem; }
+.evidence-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+.badge { font-size: 0.5625rem; font-weight: 700; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 4px; }
+.badge.fail { background: rgba(248,113,113,0.15); color: var(--red); }
+.badge.warn { background: rgba(250,204,21,0.15); color: var(--yellow); }
+.badge.pass { background: rgba(74,222,128,0.15); color: var(--green); }
+.badge.blind { background: rgba(96,165,250,0.15); color: var(--blue); }
+.evidence-label { font-size: 0.8125rem; font-weight: 500; }
+.evidence-text { font-size: 0.75rem; color: var(--muted); font-style: italic; margin-bottom: 0.75rem; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; }
+.metric { font-size: 0.6875rem; font-family: 'JetBrains Mono', monospace; padding: 0.5rem 0.75rem; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); }
+.metric .k { color: var(--muted); }
+.metric .v { color: var(--text); font-weight: 500; }
+.metric .v.bad { color: var(--red); }
+.metric .v.ok { color: var(--green); }
+
+/* Viewport diagram */
+.viewport-diagram { position: relative; background: var(--bg); border: 2px solid var(--border); border-radius: 8px; height: 80px; margin: 0.75rem 0; overflow: hidden; }
+.vp-viewport { position: absolute; top: 0; bottom: 0; left: 0; border-right: 2px dashed var(--muted); display: flex; align-items: flex-end; padding: 0.25rem; }
+.vp-viewport .vp-label { font-size: 0.5rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.vp-text { position: absolute; top: 50%; transform: translateY(-50%); height: 24px; border-radius: 4px; display: flex; align-items: center; padding: 0 0.25rem; font-size: 0.5rem; font-family: 'JetBrains Mono', monospace; color: #fff; }
+.vp-text.overflow { background: rgba(248,113,113,0.3); border: 1px solid var(--red); }
+.vp-text.fit { background: rgba(74,222,128,0.2); border: 1px solid var(--green); }
+
+.footer-note { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--muted); text-align: center; }
+
+.back-link { display: inline-block; margin-bottom: 2rem; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); text-decoration: none; font-size: 0.8125rem; }
+.back-link:hover { background: var(--border); }
+</style>
+</head>
+<body>
+
+<a href="/" class="back-link">← Back to example</a>
+
+<h1>Why Textproof Uses Real DOM, Not Pretext Math</h1>
+<p class="subtitle">Accuracy report — masterbranch.club landing page copy &middot; 40 checks &times; 9 breakpoints = 360 measurements</p>
+
+<!-- Summary cards -->
+<div class="cards">
+  <div class="card blue"><div class="n">279</div><div class="l">Comparisons</div></div>
+  <div class="card green"><div class="n">214</div><div class="l">Agree</div></div>
+  <div class="card yellow"><div class="n">44</div><div class="l">False Alarms</div></div>
+  <div class="card red"><div class="n">21</div><div class="l">Missed Issues</div></div>
+</div>
+
+<h2>Overall Accuracy</h2>
+
+<div class="donut-row">
+  <div class="donut-container">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#1c1c22" stroke-width="12"/>
+      <!-- Agree: 77% = 238.76 of 310 circumference (r=38, C=238.76) -->
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#4ade80" stroke-width="12"
+              stroke-dasharray="183.85 238.76" stroke-linecap="round"/>
+      <!-- False alarm: 16% -->
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#facc15" stroke-width="12"
+              stroke-dasharray="37.66 238.76" stroke-dashoffset="-183.85" stroke-linecap="round"/>
+      <!-- Missed: 7% -->
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#f87171" stroke-width="12"
+              stroke-dasharray="17.25 238.76" stroke-dashoffset="-221.51" stroke-linecap="round"/>
+    </svg>
+    <div class="donut-center">
+      <div class="pct">77%</div>
+      <div class="lbl">Agreement</div>
+    </div>
+  </div>
+  <div class="donut-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> 214 agree — pretext and DOM gave the same verdict</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> 44 false alarms — pretext said broken, DOM says fine</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> 21 missed — pretext said fine, DOM found real issues</div>
+  </div>
+</div>
+
+<h2>Accuracy by Mode</h2>
+
+<div class="bar-section">
+  <div class="bar-row">
+    <div class="bar-label">noWrap (width)</div>
+    <div class="bar-track">
+      <div class="bar-fill green" style="width:82.7%">67</div>
+      <div class="bar-fill yellow" style="width:4.9%"></div>
+      <div class="bar-fill red" style="width:12.3%">10</div>
+    </div>
+    <div class="bar-pct">83%</div>
+  </div>
+  <div class="bar-row">
+    <div class="bar-label">wrap (line count)</div>
+    <div class="bar-track">
+      <div class="bar-fill green" style="width:74.2%">147</div>
+      <div class="bar-fill yellow" style="width:20.7%">41</div>
+      <div class="bar-fill red" style="width:5%">10</div>
+    </div>
+    <div class="bar-pct">74%</div>
+  </div>
+</div>
+
+<h2>Whose Fault?</h2>
+
+<div class="fault-grid">
+  <div class="fault-card">
+    <h4 style="color:var(--red)">Pretext Math</h4>
+    <div class="big" style="color:var(--red)">95%</div>
+    <div class="desc">
+      62 of 65 disagreements are pretext's fault.<br/>
+      <strong>41 false wrap warnings</strong> — overestimates text width, predicts wrapping that doesn't happen.<br/>
+      <strong>11 missed clippings</strong> — can't detect ancestor <code>overflow:hidden</code>.<br/>
+      <strong>10 missed line-drift</strong> — underestimates width by a few px, missing a line break.
+    </div>
+  </div>
+  <div class="fault-card">
+    <h4 style="color:var(--green)">Config Error</h4>
+    <div class="big" style="color:var(--green)">5%</div>
+    <div class="desc">
+      3 of 65 disagreements are config errors.<br/>
+      <strong>Nav brand on mobile</strong> — config declared text hidden via <code>hiddenBelowWidth</code>, but CSS doesn't actually hide it. Trivially fixable.
+    </div>
+  </div>
+</div>
+
+<h2>Evidence: Failures Pretext Cannot Detect</h2>
+
+<h3>Structural Blind Spot: Ancestor Clipping</h3>
+<p style="font-size:0.8125rem;color:var(--muted);margin-bottom:1rem;">Pretext measures text width in isolation. It has no concept of the DOM tree, so it cannot detect when a parent element's <code>overflow:hidden</code> clips content. This is a fundamental limitation — not a calibration issue.</p>
+
+<div class="evidence">
+  <div class="evidence-header">
+    <span class="badge blind">blind spot</span>
+    <span class="badge fail">FAIL</span>
+    <span class="evidence-label">/login &mdash; "Welcome"</span>
+  </div>
+  <div class="evidence-text">Text: "Welcome" on login page &middot; Cinzel, noWrap</div>
+  <div class="viewport-diagram">
+    <div class="vp-viewport" style="width:60%"><div class="vp-label">375px viewport</div></div>
+    <div class="vp-text overflow" style="left:6.7%;width:69.5%">text: 434.58px &rarr; clips at 375px</div>
+  </div>
+  <div class="metric-grid">
+    <div class="metric"><span class="k">pretext says:</span> <span class="v ok">PASS</span></div>
+    <div class="metric"><span class="k">real DOM:</span> <span class="v bad">FAIL &middot; viewport-clip</span></div>
+    <div class="metric"><span class="k">text width:</span> <span class="v bad">434.58px</span></div>
+    <div class="metric"><span class="k">viewport:</span> <span class="v">375px (iPhone SE)</span></div>
+    <div class="metric"><span class="k">rect.right:</span> <span class="v bad">476.58px (101px past edge)</span></div>
+    <div class="metric"><span class="k">clippedViewportX:</span> <span class="v bad">true</span></div>
+  </div>
+</div>
+
+<div class="evidence">
+  <div class="evidence-header">
+    <span class="badge blind">blind spot</span>
+    <span class="badge warn">WARN</span>
+    <span class="evidence-label">/ Footer wordmark &mdash; "THE MASTER BRANCH"</span>
+  </div>
+  <div class="evidence-text">Text: "THE MASTER BRANCH" &middot; Cinzel, noWrap, intentional overflow with negative margins</div>
+  <div class="viewport-diagram">
+    <div class="vp-viewport" style="width:50%"><div class="vp-label">375px viewport</div></div>
+    <div class="vp-text overflow" style="left:-1.3%;width:65%">text: 390.14px &rarr; overflows both sides</div>
+  </div>
+  <div class="metric-grid">
+    <div class="metric"><span class="k">pretext says:</span> <span class="v ok">PASS</span></div>
+    <div class="metric"><span class="k">real DOM:</span> <span class="v bad">WARN &middot; horizontal-clipping</span></div>
+    <div class="metric"><span class="k">text width:</span> <span class="v bad">390.14px</span></div>
+    <div class="metric"><span class="k">viewport:</span> <span class="v">375px (iPhone SE)</span></div>
+    <div class="metric"><span class="k">rect.left:</span> <span class="v bad">-8px (negative margin)</span></div>
+    <div class="metric"><span class="k">clippedAncestorX:</span> <span class="v bad">true</span></div>
+  </div>
+</div>
+
+<h3>Math Drift: Line Count Mismatch</h3>
+<p style="font-size:0.8125rem;color:var(--muted);margin-bottom:1rem;">Pretext's glyph tables underestimate rendered width by 4-8%. When text is near the line-break boundary, a few pixels of drift tip one word to the next line. The 5% safety margin compensates for most cases but not all.</p>
+
+<div class="evidence">
+  <div class="evidence-header">
+    <span class="badge warn">drift</span>
+    <span class="badge warn">WARN</span>
+    <span class="evidence-label">/ Hero tagline &mdash; "Build what you need."</span>
+  </div>
+  <div class="evidence-text">Text from current landing-copy.ts &middot; Hero tagline, should be 1 line on desktop</div>
+  <div class="metric-grid">
+    <div class="metric"><span class="k">pretext says:</span> <span class="v ok">PASS (1 line)</span></div>
+    <div class="metric"><span class="k">real DOM:</span> <span class="v bad">WARN &middot; 2 lines (+1 drift)</span></div>
+    <div class="metric"><span class="k">device:</span> <span class="v">iPhone SE (375px)</span></div>
+    <div class="metric"><span class="k">container:</span> <span class="v">291px</span></div>
+    <div class="metric"><span class="k">cause:</span> <span class="v">glyph table ~5% narrower than browser</span></div>
+  </div>
+</div>
+
+<div class="evidence">
+  <div class="evidence-header">
+    <span class="badge warn">drift</span>
+    <span class="badge warn">WARN</span>
+    <span class="evidence-label">/ Manifesto body 3 &mdash; "For those who trade candid feedback."</span>
+  </div>
+  <div class="evidence-text">Text from current landing-copy.ts &middot; Manifesto statement</div>
+  <div class="metric-grid">
+    <div class="metric"><span class="k">pretext says:</span> <span class="v ok">PASS</span></div>
+    <div class="metric"><span class="k">real DOM:</span> <span class="v bad">WARN &middot; +1 line drift</span></div>
+    <div class="metric"><span class="k">device:</span> <span class="v">Tablet portrait (768px)</span></div>
+    <div class="metric"><span class="k">DOM lines:</span> <span class="v bad">3</span></div>
+    <div class="metric"><span class="k">baseline (desktop):</span> <span class="v">2</span></div>
+  </div>
+</div>
+
+<div class="evidence">
+  <div class="evidence-header">
+    <span class="badge warn">drift</span>
+    <span class="badge warn">WARN</span>
+    <span class="evidence-label">/ Closing heading &mdash; "Are you ready?"</span>
+  </div>
+  <div class="evidence-text">Text from current landing-copy.ts &middot; CTA prompt</div>
+  <div class="metric-grid">
+    <div class="metric"><span class="k">pretext says:</span> <span class="v ok">PASS (1 line)</span></div>
+    <div class="metric"><span class="k">real DOM:</span> <span class="v bad">WARN &middot; 2 lines on mobile</span></div>
+    <div class="metric"><span class="k">devices:</span> <span class="v">iPhone SE, Android mid, iPhone Pro Max</span></div>
+    <div class="metric"><span class="k">cause:</span> <span class="v">font size at mobile root (18px) pushes past container</span></div>
+  </div>
+</div>
+
+<h2>Conclusion</h2>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin:1.5rem 0;font-size:0.875rem;line-height:1.7;">
+  <strong>Pretext math is useful but structurally incomplete.</strong><br/><br/>
+  <strong style="color:var(--green)">What it gets right (77%):</strong> Basic text-fit classification. When text clearly fits or clearly overflows, pretext agrees with the DOM.<br/><br/>
+  <strong style="color:var(--red)">What it cannot do:</strong> Detect ancestor clipping (<code>overflow:hidden</code>), negative margin overflow, or CSS layout context. These require real DOM measurement. This is not a calibration problem — it is a category limitation.<br/><br/>
+  <strong style="color:var(--yellow)">What it gets wrong (16% false alarms):</strong> Overestimates text width for wrapped content, producing 41 false warnings about line-wrap drift that doesn't occur in the real browser.<br/><br/>
+  <strong style="color:var(--blue)">Why Textproof uses Playwright:</strong> Real DOM measurement is the only way to catch all text layout issues. Pretext math can accelerate the search, but the final verdict must come from the browser.
+</div>
+
+<div class="footer-note">
+  Generated from masterbranch.club artifacts &middot; Evaluated accuracy on real production copy across 9 breakpoints &middot; textproof &middot; 2026
+</div>
+
+</body>
+</html>
