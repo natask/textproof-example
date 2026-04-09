@@ -1,60 +1,92 @@
 # textproof-example
 
-Live demo of [textproof](https://github.com/natask/textproof) catching text layout issues.
+Live demo of [textproof](https://github.com/natask/textproof) — automated text layout verification across viewports.
 
-**Live:** https://textproof-example.pages.dev
+**Live:** [textproof-example.pages.dev](https://textproof-example.pages.dev)
 
-## What it shows
+## What's here
 
-A responsive HTML page with intentional text issues:
-- **Card headings** use `white-space: nowrap` → overflow on mobile
-- **Hero title** uses `clamp()` for fluid sizing
-- **Paragraph text** tests line-wrap drift across breakpoints
+### Example page (`/`)
 
-Run textproof against this page to see what it catches at each breakpoint (375px–1920px).
+A responsive site with **intentional text bugs** that textproof catches:
 
----
+| Bug | CSS cause | What textproof reports |
+|-----|-----------|----------------------|
+| Heading overflow on mobile | `white-space: nowrap` on a long string | **FAIL** — text bleeds past container at 375px–430px |
+| Fixed font clips in container | `font-size: 42px` with no `clamp()` | **FAIL** — text exceeds container width on mobile |
+| Line-wrap drift | `font-size: 1.25rem` paragraph in narrow card | **WARN** — +3 lines vs desktop baseline on iPhone SE |
+| Hero title (correct) | `clamp(2.5rem, 10vw, 5rem)` | **PASS** — fits all 9 breakpoints |
 
-## Local setup
+### Screenproof viewer (`/screenproof.html`)
+
+Interactive report showing textproof results for this page:
+
+- **Left panel** — list of all text checks, sorted by severity (fail → warn → pass)
+- **Center viewport** — live preview of the page at the selected breakpoint
+- **Click a check** → viewport scrolls to that element and highlights it with a pink outline
+- **Device bar** — switch between 9 breakpoints (375px–1920px) with status dots
+- **Left/right arrows** — navigate breakpoints from the viewport, or use `←` `→` keys
+- **Filter tabs** — show only fails, warns, or passes
+- **Search** — find checks by text content
+
+### Accuracy report (`/why-not-pretext.html`)
+
+Data-driven infographic showing why textproof uses real DOM measurement instead of mathematical text approximation (pretext). Based on 360 measurements across a production site:
+
+- 77% agreement between pretext math and real DOM
+- 16% false alarms from pretext (overestimates text width)
+- 7% missed issues (ancestor clipping, negative margins)
+
+## Run locally
 
 ```bash
 pnpm install
-```
 
-## Local run
-
-```bash
-# start the example site on http://localhost:3000
+# Start the example site
 pnpm dev
 
-# in another terminal — verify text layout
+# Run textproof against it
 pnpm textproof
 
-# view the report in your browser
+# Open the interactive report
 pnpm textproof:view
 ```
 
----
+## Deploy
 
-## Deploy to Cloudflare Pages
+Hosted on Cloudflare Pages. Static files in `public/` — no build step.
 
-1. **Push to GitHub**
-   ```bash
-   git push origin master
-   ```
-
-2. **Connect to Cloudflare Pages:**
-   - Go to [dash.cloudflare.com](https://dash.cloudflare.com) → Pages
-   - Click "Create project" → "Connect to Git"
-   - Select this repo: `natask/textproof-example`
-   - Build settings:
-     - **Build command:** (leave empty)
-     - **Build output directory:** `public`
-   - Click "Save and deploy"
-
-3. **Done!** Your site is live at `https://textproof-example.pages.dev`
-
-Now people can visit the live site and run textproof against it:
 ```bash
-textproof verify --app=https://textproof-example.pages.dev --pages=/
+# Deploy via CLI
+npx wrangler pages deploy public
+
+# Or connect this repo to Cloudflare Pages:
+# Build command: (empty)
+# Build output directory: public
+```
+
+## Files
+
+```
+public/
+├── index.html              # Example page with intentional text bugs
+├── screenproof.html        # Interactive textproof results viewer
+├── results.json            # Textproof results data (30 checks × 9 breakpoints)
+├── why-not-pretext.html    # Pretext vs real DOM accuracy report
+└── results.html            # Simple summary view
+```
+
+## Regenerate results
+
+After changing `index.html`, re-run textproof to update the results:
+
+```bash
+textproof verify --app=https://textproof-example.pages.dev --pages=/ --channel=chrome
+```
+
+Then transform and deploy:
+
+```bash
+node transform-results.js > public/results.json
+npx wrangler pages deploy public
 ```
