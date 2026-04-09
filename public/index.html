@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Textproof Example</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; padding: 2rem; }
+
+    .hero { max-width: 800px; margin: 0 auto; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 4rem); line-height: 1.1; margin-bottom: 1rem; }
+    .hero p { font-size: clamp(1rem, 2vw, 1.5rem); line-height: 1.5; color: #555; margin-bottom: 2rem; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; max-width: 800px; margin: 0 auto; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; }
+    .card h2 { font-size: 1.25rem; margin-bottom: 0.5rem; white-space: nowrap; }
+    .card p { font-size: 0.9rem; color: #666; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>Ship text that fits every screen</h1>
+    <p>Textproof catches overflow, line-wrap drift, and font-size issues before your users do. Run it against any live page.</p>
+  </section>
+
+  <section class="card-grid">
+    <div class="card">
+      <h2>Overflow Detection</h2>
+      <p>Finds text that bleeds outside its container at any breakpoint.</p>
+    </div>
+    <div class="card">
+      <h2>Line-Wrap Drift</h2>
+      <p>Compares line counts across viewports to catch unexpected reflows.</p>
+    </div>
+    <div class="card">
+      <h2>Font Size Recommendations</h2>
+      <p>Suggests clamp() values that keep text readable from mobile to desktop.</p>
+    </div>
+  </section>
+</body>
+</html>

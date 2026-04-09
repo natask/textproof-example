@@ -1,0 +1,15 @@
+{
+  "name": "textproof-example",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Example: using textproof to verify text layout across viewports",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve public -l 3000",
+    "textproof": "textproof verify --app=http://localhost:3000 --pages=/",
+    "textproof:view": "textproof view"
+  },
+  "devDependencies": {
+    "textproof": "file:../textproof"
+  }
+}
